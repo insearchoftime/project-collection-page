@@ -3,7 +3,7 @@
   const gate = document.getElementById('gate');
   const status = document.getElementById('status');
   const retry = document.getElementById('retry');
-  const frame = document.getElementById('content');
+  let frame = document.getElementById('content');
   const decoder = new TextDecoder();
   const aad = new TextEncoder().encode('project-collection/v1');
   let files = null;
@@ -85,8 +85,13 @@
     html = html.replace('</body>', bridge + '</body>');
     const title = html.match(/<title>([^<]*)<\/title>/i)?.[1] || 'Коллекция проектов';
     document.title = title;
-    frame.title = title;
-    frame.srcdoc = html;
+    // Recreate the browsing context even when restoring identical HTML from the back/forward cache.
+    const replacement = frame.cloneNode(false);
+    replacement.removeAttribute('src');
+    replacement.title = title;
+    replacement.srcdoc = html;
+    frame.replaceWith(replacement);
+    frame = replacement;
     frame.hidden = false;
     gate.hidden = true;
   }
@@ -160,6 +165,8 @@
   }
 
   retry.addEventListener('click', unlock);
+  // WebKit may restore the parent from the back/forward cache with an empty srcdoc frame.
+  window.addEventListener('pageshow', unlock);
   window.addEventListener('hashchange', unlock);
   window.addEventListener('popstate', unlock);
   unlock();
